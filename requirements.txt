@@ -1,0 +1,10 @@
+sqlalchemy
+psycopg2
+Flask
+Flask-RESTful
+Flask-SQLAlchemy
+Flask-Migrate
+marshmallow
+Flask-Bcrypt
+redis
+flask-cors
