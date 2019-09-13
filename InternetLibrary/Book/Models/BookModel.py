@@ -10,11 +10,9 @@ class Book(db.Model):
     author = relationship("Author", secondary="book_author")
 
     def __repr__(self):
-        return " %r | %r | %r" % (
-            self.name,
-            self.summary,
-            self.author
-        )
+        return "<Name: {}>".format(self.name), \
+               "Summary: {}>".format(self.summary), \
+               "Author: {}".format(self.author)
 
 
 class AuthorBook(db.Model):

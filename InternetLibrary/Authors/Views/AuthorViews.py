@@ -1,4 +1,4 @@
-from flask import request, jsonify, Blueprint
+from flask import request, jsonify, Blueprint, Response
 from flask.views import MethodView
 from InternetLibrary import db, app
 from InternetLibrary.Authors.Models.AuthorModel import Author
@@ -6,10 +6,6 @@ from InternetLibrary.Book.Models.BookModel import AuthorBook
 from InternetLibrary.Authors.Serializer.AuthorSerializer import AuthorSerializer
 
 author = Blueprint('Author', __name__)
-@author.route('/')
-@author.route('/home')
-def home():
-    return "Welcome to the Author Home."
 
 
 class AuthorView(MethodView):
@@ -24,37 +20,53 @@ class AuthorView(MethodView):
             })
         return jsonify(book)
 
-    def get(self, id=None):
-
-        if not id:
-            if request.args.get('name') is not None:
-                authors = Author.query.filter(Author.name.ilike("%"+request.args.get('name')+"%")).order_by(Author.name).all()
+    @author.route('/v1/author/<int:pk>/', methods=['GET', 'POST', 'PATCH', 'PUT', 'DELETE'])
+    @author.route('/v1/author/<int:pk>', methods=['GET', 'POST', 'PATCH', 'PUT', 'DELETE'])
+    @author.route('/v1/author/', methods=['GET', 'POST'])
+    def home(pk=None):
+        if request.method == 'GET':
+            if not pk:
+                if request.args.get('name') is not None:
+                    authors = Author.query.filter(Author.name.ilike("%"+request.args.get('name')+"%")).order_by(Author.name).all()
+                else:
+                    authors = Author.query.order_by(Author.name).all()
+                res = AuthorSerializer().get_not_id(authors)
             else:
-                authors = Author.query.order_by(Author.name).all()
-            res = AuthorSerializer().get_not_id(authors)
-        else:
-            res = AuthorSerializer().get_by_id(Author.query.filter_by(id=id).first())
-        return jsonify(res)
+                res = AuthorSerializer().get_by_id(Author.query.filter_by(id=pk).first())
+            return jsonify(res)
+        elif request.method == 'POST':
+            try:
+                AuthorView().post()
+                return Response('Author inserido com sucesso', 200)
+            except Exception as exc:
+                return Response(exc, 500)
+        elif request.method == 'DELETE':
+            try:
+                AuthorView().delete(pk)
+                return Response('Author deletado com sucesso', 200)
+            except Exception as exc:
+                return Response(exc, 500)
+        elif request.method == 'PUT':
+            try:
+                AuthorView().update(pk)
+                return Response('Atualizado com sucesso', 200)
+            except Exception as exc:
+                return Response(exc, 500)
 
-    def post(self):
-        name = request.form.get('name')
-        db.session.add(Author(name))
-        db.session.commit(author)
-        return jsonify({author.id: {
-            'name': author.name
-        }})
+    @staticmethod
+    def post():
+        author_insert = Author(name=request.form.get('name'))
+        db.session.add(author_insert)
+        db.session.commit()
 
-    def put(self, id):
-        return
+    @staticmethod
+    def delete(pk=None):
+        for relationship in AuthorBook.query.filter(AuthorBook.author_id == pk).all():
+            AuthorBook.query.filter(AuthorBook.id == relationship.id).delete()
+        Author.query.filter(Author.id == pk).delete()
+        db.session.commit()
 
-    def delete(self, id):
-        return
-
-
-author_view = AuthorView.as_view('author_view')
-app.add_url_rule(
-    '/v1/author/', view_func=author_view, methods=['GET', 'POST']
-)
-app.add_url_rule(
-    '/v1/author/<int:id>/', view_func=author_view, methods=['GET']
-)
+    @staticmethod
+    def update(pk):
+        Author.query.filter(id == pk).update(dict(name=request.form.get('name')))
+        db.session.commit()
