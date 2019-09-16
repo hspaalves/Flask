@@ -1,3 +1,5 @@
+import math
+
 from InternetLibrary.Book.Models.BookModel import Book, AuthorBook
 from flask.views import MethodView
 from flask import request, jsonify, Blueprint, Response
@@ -27,7 +29,7 @@ class BookView(MethodView):
                     books = Book.query.filter(Book.name.ilike("%"+data['name']+"%")).order_by(Book.name).all()
                 else:
                     books = Book.query.order_by(Book.name).all()
-                res = BookSerializer.get_not_id(books, AuthorBook)
+                res = BookView().pagination()
             else:
                 res = BookSerializer.get_by_id(Book.query.filter_by(id=pk).all(), AuthorBook)
 
@@ -88,4 +90,36 @@ class BookView(MethodView):
                     db.session.add(AuthorBook(author_id=authors, book_id=details.id))
                     db.session.commit()
 
+    @staticmethod
+    def pagination():
+        previous = None
+        next = None
+        total = len(Book.query.order_by(Book.name).all())
+        count_pages = math.ceil(total / 5)
+        if request.args.get('page') is None:
+            page = 1
+        else:
+            page = int(request.args.get('page'))
 
+        if 1 <= page < int(count_pages):
+            next = 'http://0.0.0.0:8000/v1/author/?page='+str(page+1)
+        if page == 1:
+            previous = None
+        else:
+            previous = 'http://0.0.0.0:8000/v1/author/?page='+str(page-1)
+
+        books = Book.query.paginate(page, 5).items
+        res = {'count': total, 'next': next, 'previous': previous, 'tes': count_pages}
+        lista = []
+        for detail_book in books:
+            author = []
+            for author_book in AuthorBook.query.filter_by(book_id=detail_book.id).all():
+                author.append(author_book.author_id)
+            lista.append({
+                'name': detail_book.name,
+                'summary': detail_book.summary,
+                'author': author,
+                'id': detail_book.id
+            })
+            res['results'] = lista
+        return res
