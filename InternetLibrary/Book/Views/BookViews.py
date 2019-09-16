@@ -45,6 +45,13 @@ class BookView(MethodView):
             except Exception as exc:
                 return Response(exc, 500)
 
+        elif request.method == 'PUT':
+            try:
+                BookView.update(pk)
+                return Response('Atualizado com sucesso', 200)
+            except Exception as exc:
+                return Response(exc, 500)
+
     @staticmethod
     def post():
         db.session.add(Book(name=request.form.get('name'), summary=request.form.get('summary')))
@@ -63,4 +70,9 @@ class BookView(MethodView):
 
     @staticmethod
     def update(pk):
-        pass
+        if request.form.get('name') not in '':
+            Book.query.filter(Book.id == pk).update({'name': request.form.get('name')})
+        if request.form.get('summary') not in '':
+            Book.query.filter(Book.id == pk).update({'summary': request.form.get('summary')})
+        db.session.commit()
+
