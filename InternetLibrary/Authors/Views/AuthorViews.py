@@ -1,5 +1,8 @@
 from flask import request, jsonify, Blueprint, Response
 from flask.views import MethodView
+from flask_restful.representations import json
+import json
+
 from InternetLibrary import db, app
 from InternetLibrary.Authors.Models.AuthorModel import Author
 from InternetLibrary.Book.Models.BookModel import AuthorBook
@@ -25,9 +28,10 @@ class AuthorView(MethodView):
     @author.route('/v1/author/', methods=['GET', 'POST'])
     def home(pk=None):
         if request.method == 'GET':
+            data = request.get_json()
             if not pk:
                 if request.args.get('name') is not None:
-                    authors = Author.query.filter(Author.name.ilike("%"+request.args.get('name')+"%")).order_by(Author.name).all()
+                    authors = Author.query.filter(Author.name.ilike("%"+data['name']+"%")).order_by(Author.name).all()
                 else:
                     authors = Author.query.order_by(Author.name).all()
                 res = AuthorSerializer().get_not_id(authors)
@@ -37,7 +41,7 @@ class AuthorView(MethodView):
         elif request.method == 'POST':
             try:
                 AuthorView().post()
-                return Response('Author inserido com sucesso', 200)
+                return Response('Created', 201)
             except Exception as exc:
                 return Response(exc, 500)
         elif request.method == 'DELETE':
@@ -55,7 +59,8 @@ class AuthorView(MethodView):
 
     @staticmethod
     def post():
-        author_insert = Author(name=request.form.get('name'))
+        data = request.get_json()
+        author_insert = Author(name=data['name'])
         db.session.add(author_insert)
         db.session.commit()
 
@@ -68,5 +73,6 @@ class AuthorView(MethodView):
 
     @staticmethod
     def update(pk):
-        Author.query.filter(Author.id == pk).update({'name': request.form.get('name')})
+        data = request.get_json()
+        Author.query.filter(Author.id == pk).update({'name': data['name']})
         db.session.commit()
