@@ -74,9 +74,18 @@ class BookView(MethodView):
     @staticmethod
     def update(pk):
         data = request.get_json()
-        if request.form.get('name') not in '':
+        if data['name'] not in '':
             Book.query.filter(Book.id == pk).update({'name': data['name']})
-        if request.form.get('summary') not in '':
+        if data['summary'] not in '':
             Book.query.filter(Book.id == pk).update({'summary': data['summary']})
         db.session.commit()
+        if data['author'] not in '':
+            for relationship in AuthorBook.query.filter(AuthorBook.book_id == pk).all():
+                AuthorBook.query.filter(AuthorBook.id == relationship.id).delete()
+            for authors in data['author']:
+                if authors not in '':
+                    details = Book.query.order_by(Book.id.desc()).first()
+                    db.session.add(AuthorBook(author_id=authors, book_id=details.id))
+                    db.session.commit()
+
 
