@@ -1,8 +1,5 @@
 from flask import request, jsonify, Blueprint, Response
 from flask.views import MethodView
-from flask_restful.representations import json
-import json
-
 from InternetLibrary import db, app
 from InternetLibrary.Authors.Models.AuthorModel import Author
 from InternetLibrary.Book.Models.BookModel import AuthorBook
@@ -15,7 +12,7 @@ class AuthorView(MethodView):
     @author.route('/v1/author/<int:pk>/book/')
     def get_book_detail(pk):
         book = []
-        for book_author in AuthorBook.query.filter_by(author_id=pk).all():
+        for book_author in AuthorBook.query.filter(AuthorBook.author_id==pk).all():
             book.append({
                 'id': book_author.book_id,
                 'name': book_author.book.name,
@@ -31,13 +28,14 @@ class AuthorView(MethodView):
             data = request.get_json()
             if not pk:
                 if request.args.get('name') is not None:
-                    authors = Author.query.filter(Author.name.ilike("%"+data['name']+"%")).order_by(Author.name).all()
+                    authors = Author.query.filter(Author.name.ilike("%"+request.args.get('name')+"%")).order_by(Author.name).all()
                 else:
                     authors = Author.query.order_by(Author.name).all()
-                res = AuthorSerializer().get_not_id(authors)
+                res = AuthorView().pagination()
             else:
                 res = AuthorSerializer().get_by_id(Author.query.filter_by(id=pk).first())
             return jsonify(res)
+
         elif request.method == 'POST':
             try:
                 AuthorView().post()
@@ -76,3 +74,32 @@ class AuthorView(MethodView):
         data = request.get_json()
         Author.query.filter(Author.id == pk).update({'name': data['name']})
         db.session.commit()
+
+    @staticmethod
+    def pagination():
+        previous = None
+        next = None
+        total = len(Author.query.order_by(Author.name).all())
+        count_pages = total / 5
+        if request.args.get('page') is None:
+            page = 1
+        else:
+            page = int(request.args.get('page'))
+
+        if 1 <= page <= int(count_pages):
+            next = 'http://0.0.0.0:8000/v1/author/?page='+str(page+1)
+        if page == 1:
+            previous = 'http://0.0.0.0:8000/v1/author'
+        else:
+            previous = 'http://0.0.0.0:8000/v1/author/?page='+str(page-1)
+
+        authors = Author.query.paginate(page, 5).items
+        res = {'count': total, 'next': next, 'previous': previous}
+        results = []
+        for detail_author in authors:
+            results.append({
+                'id': detail_author.id,
+                'name': detail_author.name
+            })
+            res['results'] = results
+        return res
