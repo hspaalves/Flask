@@ -68,5 +68,5 @@ class AuthorView(MethodView):
 
     @staticmethod
     def update(pk):
-        Author.query.filter(id == pk).update(dict(name=request.form.get('name')))
+        Author.query.filter(Author.id == pk).update({'name': request.form.get('name')})
         db.session.commit()
