@@ -21,9 +21,10 @@ class BookView(MethodView):
     @book.route('/v1/book/', methods=['GET', 'POST'])
     def home(pk=None):
         if request.method == 'GET':
+            data = request.get_json()
             if not pk:
                 if request.args.get('name') is not None:
-                    books = Book.query.filter(Book.name.ilike("%"+request.args.get('name')+"%")).order_by(Book.name).all()
+                    books = Book.query.filter(Book.name.ilike("%"+data['name']+"%")).order_by(Book.name).all()
                 else:
                     books = Book.query.order_by(Book.name).all()
                 res = BookSerializer.get_not_id(books, AuthorBook)
@@ -48,18 +49,20 @@ class BookView(MethodView):
         elif request.method == 'PUT':
             try:
                 BookView.update(pk)
-                return Response('Atualizado com sucesso', 200)
+                return Response('Created', 201)
             except Exception as exc:
                 return Response(exc, 500)
 
     @staticmethod
     def post():
-        db.session.add(Book(name=request.form.get('name'), summary=request.form.get('summary')))
+        data = request.get_json()
+        db.session.add(Book(name=data['name'], summary=data['summary']))
         db.session.commit()
-        if request.form.get('author') not in '':
-            details = Book.query.order_by(Book.id.desc()).first()
-            db.session.add(AuthorBook(author_id=request.form.get('author'), book_id=details.id))
-            db.session.commit()
+        for authors in data['author']:
+            if authors not in '':
+                details = Book.query.order_by(Book.id.desc()).first()
+                db.session.add(AuthorBook(author_id=authors, book_id=details.id))
+                db.session.commit()
 
     @staticmethod
     def delete(pk):
@@ -70,9 +73,10 @@ class BookView(MethodView):
 
     @staticmethod
     def update(pk):
+        data = request.get_json()
         if request.form.get('name') not in '':
-            Book.query.filter(Book.id == pk).update({'name': request.form.get('name')})
+            Book.query.filter(Book.id == pk).update({'name': data['name']})
         if request.form.get('summary') not in '':
-            Book.query.filter(Book.id == pk).update({'summary': request.form.get('summary')})
+            Book.query.filter(Book.id == pk).update({'summary': data['summary']})
         db.session.commit()
 
