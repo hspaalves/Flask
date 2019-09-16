@@ -1,3 +1,5 @@
+import math
+
 from flask import request, jsonify, Blueprint, Response
 from flask.views import MethodView
 from InternetLibrary import db, app
@@ -80,13 +82,13 @@ class AuthorView(MethodView):
         previous = None
         next = None
         total = len(Author.query.order_by(Author.name).all())
-        count_pages = total / 5
+        count_pages = math.ceil(total / 5)
         if request.args.get('page') is None:
             page = 1
         else:
             page = int(request.args.get('page'))
 
-        if 1 <= page <= int(count_pages):
+        if 1 <= page < int(count_pages):
             next = 'http://0.0.0.0:8000/v1/author/?page='+str(page+1)
         if page == 1:
             previous = 'http://0.0.0.0:8000/v1/author'
